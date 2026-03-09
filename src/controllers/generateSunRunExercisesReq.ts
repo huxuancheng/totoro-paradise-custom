@@ -9,6 +9,7 @@ import timeUtil from '../utils/timeUtil';
 /**
  * @param minTime 最短用时，以分钟计
  *  @param maxTime 最长用时，以分钟计
+ *  @param customSeconds 自定义秒数（可选，用于精确到秒）
  */
 const generateRunReq = async ({
   distance,
@@ -20,6 +21,7 @@ const generateRunReq = async ({
   phoneNumber,
   minTime,
   maxTime,
+  customSeconds,
 }: {
   distance: string;
   routeId: string;
@@ -30,16 +32,29 @@ const generateRunReq = async ({
   phoneNumber: string;
   minTime: string;
   maxTime: string;
+  customSeconds?: string;
 }) => {
-  const { minSecond, maxSecond } = {
-    minSecond: Number(minTime) * 60,
-    maxSecond: Number(maxTime) * 60,
-  };
-  const avgSecond = minSecond + maxSecond / 2;
-  /** 正态分布，以最短和最长用时的平均值为平均值，以 1/2 区间的 1/3 为标准差 */
-  const waitSecond = Math.floor(
-    normalRandom(minSecond + maxSecond / 2, (maxSecond - avgSecond) / 3),
-  );
+  const { minSecond, maxSecond } = customSeconds
+    ? {
+        minSecond: Number(customSeconds),
+        maxSecond: Number(customSeconds),
+      }
+    : {
+        minSecond: Number(minTime) * 60,
+        maxSecond: Number(maxTime) * 60,
+      };
+  
+  let waitSecond: number;
+  if (customSeconds) {
+    // 自定义时间时，直接使用精确的秒数
+    waitSecond = Number(customSeconds);
+  } else {
+    // 使用默认时间范围时，按正态分布生成随机时间
+    const avgSecond = (minSecond + maxSecond) / 2;
+    const std = (maxSecond - minSecond) / 6;
+    /** 正态分布，以最短和最长用时的平均值为平均值，以 1/2 区间的 1/3 为标准差 */
+    waitSecond = Math.floor(normalRandom(avgSecond, std));
+  }
   const startTime = new Date();
   const endTime = new Date(Number(startTime) + waitSecond * 1000);
   const distanceNum = Number(distance);
